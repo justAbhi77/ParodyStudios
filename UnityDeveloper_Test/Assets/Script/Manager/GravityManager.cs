@@ -18,8 +18,8 @@ public class GravityManager : MonoBehaviour
     [SerializeField] float gravCorrectionDist = 10f;
 
     // So we know if the rotations need to be redone
-    private bool floorChanged = false;
-    private bool isGrounded = false;
+    private bool floorChanged = false, isGrounded = false, GameOver = false;
+
     public bool IsGrounded
     {
         get
@@ -55,11 +55,14 @@ public class GravityManager : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (GameOver)
+            return;
+
         floorChanged = false;
 
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            CorrectRotation(playerForward, CharacterPivot.transform.up);
+            CorrectRotation(playerForward, CharacterPivot.transform.up);    
         }
         if (Input.GetKeyDown(KeyCode.DownArrow))
         {
@@ -129,5 +132,10 @@ public class GravityManager : MonoBehaviour
         HoloCharacter.transform.localPosition = NewGravityOrientationNormal;
         HoloCharacter.transform.rotation = desiredRot;
         HoloCharacter.SetActive(true);
+    }
+
+    public void PauseInputs()
+    {
+        GameOver = true;
     }
 }

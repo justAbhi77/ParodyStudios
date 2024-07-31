@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 [RequireComponent (typeof(Rigidbody))]
 [RequireComponent(typeof(GravityManager))]
@@ -18,6 +19,10 @@ public class PlayerCharacter : MonoBehaviour
     [SerializeField] float groundCheckDistance = 0.1f;
     [SerializeField] LayerMask groundLayer;
 
+    public UnityEvent OnPlayerLeavePlayArea;
+
+    public UnityEvent OnPlayerCollectedCube;
+
     GravityManager GravityManager;
 
     float xRot;
@@ -25,6 +30,8 @@ public class PlayerCharacter : MonoBehaviour
     Vector3 movedirection,rotDir;
 
     Rigidbody rb;
+
+    bool GameOver = false;
 
     private void Start()
     {
@@ -36,12 +43,16 @@ public class PlayerCharacter : MonoBehaviour
 
     private void Update()
     {
+        if (GameOver) return;
+
         movedirection = new Vector3(Input.GetAxisRaw("Horizontal"),0, Input.GetAxisRaw("Vertical")).normalized;
 
         rotDir = new Vector3(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
     }
-    private void FixedUpdate()  
+    private void FixedUpdate()
     {
+        if (GameOver) return;
+
         movedirection = transform.TransformDirection(movedirection);
         rb.MovePosition(rb.position + movespeed * Time.deltaTime * movedirection);
 
@@ -65,11 +76,15 @@ public class PlayerCharacter : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (GameOver) return;
+
         GravityManager.CorrectRotation(transform.forward);
     }
 
     void CheckGrounded()
     {
+        if (GameOver) return;
+
         // Cast a ray downwards from the center of the Rigidbody
         RaycastHit hit;
 
@@ -77,6 +92,12 @@ public class PlayerCharacter : MonoBehaviour
         Physics.Raycast(GroundCheckPos.position, -GroundCheckPos.up, out hit, groundCheckDistance, groundLayer);
 
         GravityManager.IsGrounded = isGrounded;
+
+        if (isGrounded)
+        {
+            Vector3 currentSurfaceRot = transform.rotation.eulerAngles;
+            Vector3 targetSurfaceRotation = Quaternion.FromToRotation(transform.up, hit.normal).eulerAngles;
+        }
 
         Debug.DrawRay(GroundCheckPos.position, -GroundCheckPos.up * groundCheckDistance, Color.red, 5f);
     }
@@ -104,5 +125,29 @@ public class PlayerCharacter : MonoBehaviour
 
             transform.eulerAngles = currentRot;
         }*/
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("PointCube"))
+        {
+            OnPlayerCollectedCube.Invoke();
+            Destroy(other.gameObject);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.CompareTag("Finish"))
+        {
+            PauseInputs();
+            OnPlayerLeavePlayArea.Invoke();
+        }
+    }
+
+    public void PauseInputs()
+    {
+        GameOver = true;
+        GravityManager.PauseInputs();
     }
 }
